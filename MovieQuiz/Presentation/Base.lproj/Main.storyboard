@@ -25,7 +25,7 @@
                                         <subviews>
                                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Вопрос:" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="rq5-Cg-fz9" userLabel="Question Title Label">
                                                 <rect key="frame" x="0.0" y="0.0" width="333.5" height="24"/>
-                                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="20"/>
+                                                <fontDescription key="fontDescription" name="HelveticaNeue" family="Helvetica Neue" pointSize="20"/>
                                                 <color key="textColor" name="YP White"/>
                                                 <nil key="highlightedColor"/>
                                             </label>
@@ -114,7 +114,10 @@
                     <connections>
                         <outlet property="counterLabel" destination="4G6-m4-3Jm" id="b9S-9h-Nm9"/>
                         <outlet property="imageView" destination="qXA-2k-sVh" id="TBD-hS-agZ"/>
+                        <outlet property="noButtonLabel" destination="7Qh-i6-OzY" id="eKF-Bh-ZkA"/>
+                        <outlet property="questionLabel" destination="rq5-Cg-fz9" id="fjM-W7-p6X"/>
                         <outlet property="textLabel" destination="urg-vo-Jmm" id="sNI-ER-QS2"/>
+                        <outlet property="yesButtonLabel" destination="mzU-8V-LEc" id="ABy-IT-jXF"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
