@@ -31,21 +31,19 @@ struct QuizQuestion {
 }
 
 final class MovieQuizViewController: UIViewController {
-    @IBOutlet private weak var imageView: UIImageView!
-    @IBOutlet private weak var textLabel: UILabel!
-    @IBOutlet private weak var counterLabel: UILabel!
-    @IBOutlet private weak var questionLabel: UILabel!
-    @IBOutlet private weak var noButtonLabel: UIButton!
-    @IBOutlet private weak var yesButtonLabel: UIButton!
+    @IBOutlet private var imageView: UIImageView!
+    @IBOutlet private var textLabel: UILabel!
+    @IBOutlet private var counterLabel: UILabel!
+    @IBOutlet private var questionLabel: UILabel!
+    @IBOutlet private var noButtonLabel: UIButton!
+    @IBOutlet private var yesButtonLabel: UIButton!
 
     @IBAction private func noButtonClicked(_ sender: Any) {
-        let currentQuestion = questions[currentQuestionIndex]
-        showAnswerResult(isCorrect: currentQuestion.correctAnswer == false)
+        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer)
     }
     
     @IBAction private func yesButtonClicked(_ sender: Any) {
-        let currentQuestion = questions[currentQuestionIndex]
-        showAnswerResult(isCorrect: currentQuestion.correctAnswer == true)
+        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer)
     }
     
     
