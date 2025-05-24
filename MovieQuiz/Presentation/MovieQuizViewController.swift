@@ -31,21 +31,19 @@ struct QuizQuestion {
 }
 
 final class MovieQuizViewController: UIViewController {
-    @IBOutlet private var imageView: UIImageView!
+    // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
     @IBOutlet private var questionLabel: UILabel!
+    
     @IBOutlet private var noButtonLabel: UIButton!
     @IBOutlet private var yesButtonLabel: UIButton!
-
-    @IBAction private func noButtonClicked(_ sender: Any) {
-        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer)
-    }
     
-    @IBAction private func yesButtonClicked(_ sender: Any) {
-        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer)
-    }
+    @IBOutlet private var imageView: UIImageView!
     
+    // MARK: - Private Properties
+    private var currentQuestionIndex = 0
+    private var correctAnswers = 0
     
     private let questions: [QuizQuestion] = [
         QuizQuestion(
@@ -90,13 +88,30 @@ final class MovieQuizViewController: UIViewController {
             correctAnswer: false)
     ]
     
-    // переменная с индексом текущего вопроса, начальное значение 0
-    // (по этому индексу будем искать вопрос в массиве, где индекс первого элемента 0, а не 1)
-    private var currentQuestionIndex = 0
+    // MARK: - Initializers
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setFonts()
     
-    // переменная со счётчиком правильных ответов, начальное значение закономерно 0
-    private var correctAnswers = 0
+        let currentQuestion = questions[currentQuestionIndex]
+        let convertedData = convert(model: currentQuestion)
+        show(quiz: convertedData)
+    }
     
+    // MARK: - IB Actions
+    @IBAction private func noButtonClicked(_ sender: Any) {
+        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer == false)
+        
+        noButtonLabel.isEnabled = false
+    }
+    
+    @IBAction private func yesButtonClicked(_ sender: Any) {
+        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer == true)
+        
+        yesButtonLabel.isEnabled = false
+    }
+    
+    // MARK: - Private Methods
     private func setFonts() {
         questionLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
         counterLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
@@ -105,14 +120,14 @@ final class MovieQuizViewController: UIViewController {
         textLabel.font = UIFont(name: "YSDisplay-Bold", size: 23)
     }
     
-    // приватный метод, который меняет цвет рамки
     private func showAnswerResult(isCorrect: Bool) {
         if isCorrect {
             correctAnswers += 1
         }
         
         imageView.layer.masksToBounds = true // даём разрешение на рисование рамки
-        imageView.layer.borderWidth = 8 // толщина рамки
+        imageView.layer.borderWidth = 8
+        imageView.layer.cornerRadius = 20
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
         
         // запускаем задачу через 1 секунду c помощью диспетчера задач
@@ -127,7 +142,7 @@ final class MovieQuizViewController: UIViewController {
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questions.count - 1 {
             let text = "Ваш результат: \(correctAnswers)/10"
-            let viewModel = QuizResultsViewModel( // 2
+            let viewModel = QuizResultsViewModel(
                 title: "Этот раунд окончен!",
                 text: text,
                 buttonText: "Сыграть ещё раз")
@@ -140,6 +155,8 @@ final class MovieQuizViewController: UIViewController {
             
             show(quiz: viewModel)
         }
+        noButtonLabel.isEnabled = true
+        yesButtonLabel.isEnabled = true
     }
     
     
@@ -181,14 +198,5 @@ final class MovieQuizViewController: UIViewController {
         imageView.image = step.image
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setFonts()
-    
-        let currentQuestion = questions[currentQuestionIndex]
-        let convertedData = convert(model: currentQuestion)
-        show(quiz: convertedData)
     }
 }
