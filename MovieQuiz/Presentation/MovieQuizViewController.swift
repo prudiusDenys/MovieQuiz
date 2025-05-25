@@ -6,30 +6,6 @@ struct ViewModel {
   let questionNumber: String
 }
 
-// для состояния "Вопрос показан"
-struct QuizStepViewModel {
-  let image: UIImage
-  let question: String
-  let questionNumber: String
-}
-
-// для состояния "Результат квиза"
-struct QuizResultsViewModel {
-  let title: String
-  let text: String
-  let buttonText: String
-}
-
-struct QuizQuestion {
-  // строка с названием фильма,
-  // совпадает с названием картинки афиши фильма в Assets
-  let image: String
-  // строка с вопросом о рейтинге фильма
-  let text: String
-  // булевое значение (true, false), правильный ответ на вопрос
-  let correctAnswer: Bool
-}
-
 final class MovieQuizViewController: UIViewController {
     // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
@@ -44,69 +20,32 @@ final class MovieQuizViewController: UIViewController {
     // MARK: - Private Properties
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
-    
-    private let questions: [QuizQuestion] = [
-        QuizQuestion(
-            image: "The Godfather",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "The Dark Knight",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "Kill Bill",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "The Avengers",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "Deadpool",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "The Green Knight",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "Old",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false),
-        QuizQuestion(
-            image: "The Ice Age Adventures of Buck Wild",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false),
-        QuizQuestion(
-            image: "Tesla",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false),
-        QuizQuestion(
-            image: "Vivarium",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false)
-    ]
+    private var questionsAmount = 10
+    private var questionFactory: QuestionFactoryProtocol = QuestionFactory()
+    private var currentQuestion: QuizQuestion?
     
     // MARK: - Initializers
     override func viewDidLoad() {
         super.viewDidLoad()
         setFonts()
     
-        let currentQuestion = questions[currentQuestionIndex]
-        let convertedData = convert(model: currentQuestion)
-        show(quiz: convertedData)
+        if let firstQuestion = questionFactory.requestNextQuestion() {
+            currentQuestion = firstQuestion
+            
+            let convertedData = convert(model: firstQuestion)
+            show(quiz: convertedData)
+        }
     }
     
     // MARK: - IB Actions
     @IBAction private func noButtonClicked(_ sender: Any) {
-        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer == false)
+        showAnswerResult(isCorrect: currentQuestion?.correctAnswer == false)
         
         noButtonLabel.isEnabled = false
     }
     
     @IBAction private func yesButtonClicked(_ sender: Any) {
-        showAnswerResult(isCorrect: questions[currentQuestionIndex].correctAnswer == true)
+        showAnswerResult(isCorrect: currentQuestion?.correctAnswer == true)
         
         yesButtonLabel.isEnabled = false
     }
@@ -120,24 +59,72 @@ final class MovieQuizViewController: UIViewController {
         textLabel.font = UIFont(name: "YSDisplay-Bold", size: 23)
     }
     
+    // приватный метод конвертации, который принимает моковый вопрос и возвращает вью модель для главного экрана
+    private func convert(model: QuizQuestion) -> QuizStepViewModel {
+        let questionStep = QuizStepViewModel(
+            image: UIImage(named: model.image) ?? UIImage(),
+            question: model.text,
+            questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
+        
+        return questionStep
+    }
+    
+    // приватный метод для показа результатов раунда квиза
+    // принимает вью модель QuizResultsViewModel и ничего не возвращает
+    private func showResults(quiz result: QuizResultsViewModel) {
+        let alert = UIAlertController(
+            title: result.title,
+            message: result.text,
+            preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self]  _ in
+            guard let self = self else {return}
+            
+            self.currentQuestionIndex = 0
+            self.correctAnswers = 0
+            
+            if let firstQuestion = self.questionFactory.requestNextQuestion() {
+                self.currentQuestion = firstQuestion
+                
+                let viewModel = self.convert(model: firstQuestion)
+                self.show(quiz: viewModel)
+            }
+        }
+        alert.addAction(action)
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
+    private func show(quiz step: QuizStepViewModel) {
+        imageView.layer.borderWidth = 0
+        imageView.layer.cornerRadius = 20
+        imageView.image = step.image
+        textLabel.text = step.question
+        counterLabel.text = step.questionNumber
+    }
     
     // приватный метод, который содержит логику перехода в один из сценариев
     // метод ничего не принимает и ничего не возвращает
     private func showNextQuestionOrResults() {
-        if currentQuestionIndex == questions.count - 1 {
-            let text = "Ваш результат: \(correctAnswers)/10"
+        if currentQuestionIndex == questionsAmount - 1 {
+            let text = correctAnswers == questionsAmount ?
+                    "Поздравляем, вы ответили на 10 из 10!" :
+                    "Вы ответили на \(correctAnswers) из \(questionsAmount), попробуйте ещё раз!"
+            
             let viewModel = QuizResultsViewModel(
                 title: "Этот раунд окончен!",
                 text: text,
                 buttonText: "Сыграть ещё раз")
-            show(quiz: viewModel)
             
+            showResults(quiz: viewModel)
         } else {
             currentQuestionIndex += 1
-            let nextQuestion = questions[currentQuestionIndex]
-            let viewModel = convert(model: nextQuestion)
-            
-            show(quiz: viewModel)
+            if let nextQuestion = questionFactory.requestNextQuestion() {
+                currentQuestion = nextQuestion
+                
+                let viewModel = convert(model: nextQuestion)
+                show(quiz: viewModel)
+            }
         }
         noButtonLabel.isEnabled = true
         yesButtonLabel.isEnabled = true
@@ -159,49 +146,5 @@ final class MovieQuizViewController: UIViewController {
             // код, который мы хотим вызвать через 1 секунду
             self.showNextQuestionOrResults()
         }
-    }
-    
-    
-    // приватный метод конвертации, который принимает моковый вопрос и возвращает вью модель для главного экрана
-    private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let questionStep = QuizStepViewModel(
-            image: UIImage(named: model.image) ?? UIImage(),
-            question: model.text,
-            questionNumber: "\(currentQuestionIndex + 1)/\(questions.count)")
-        
-        return questionStep
-    }
-    
-    // приватный метод для показа результатов раунда квиза
-    // принимает вью модель QuizResultsViewModel и ничего не возвращает
-    private func show(quiz result: QuizResultsViewModel) {
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
-        
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self]  _ in
-            guard let self = self else {return}
-            
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0
-            
-            let firstQuestion = self.questions[self.currentQuestionIndex]
-            let viewModel = self.convert(model: firstQuestion)
-            self.show(quiz: viewModel)
-        }
-        
-        alert.addAction(action)
-        
-        self.present(alert, animated: true, completion: nil)
-    }
-    
-    // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
-    private func show(quiz step: QuizStepViewModel) {
-        imageView.layer.borderWidth = 0
-        imageView.layer.cornerRadius = 20
-        imageView.image = step.image
-        textLabel.text = step.question
-        counterLabel.text = step.questionNumber
     }
 }
