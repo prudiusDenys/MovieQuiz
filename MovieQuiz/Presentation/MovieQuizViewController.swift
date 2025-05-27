@@ -6,7 +6,7 @@ struct ViewModel {
   let questionNumber: String
 }
 
-final class MovieQuizViewController: UIViewController {
+final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
@@ -21,20 +21,16 @@ final class MovieQuizViewController: UIViewController {
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
     private var questionsAmount = 10
-    private var questionFactory: QuestionFactoryProtocol = QuestionFactory()
+    private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
     
     // MARK: - Initializers
     override func viewDidLoad() {
         super.viewDidLoad()
         setFonts()
-    
-        if let firstQuestion = questionFactory.requestNextQuestion() {
-            currentQuestion = firstQuestion
-            
-            let convertedData = convert(model: firstQuestion)
-            show(quiz: convertedData)
-        }
+        
+        questionFactory = QuestionFactory(delegate: self)
+        questionFactory?.requestNextQuestion()
     }
     
     // MARK: - IB Actions
@@ -83,12 +79,7 @@ final class MovieQuizViewController: UIViewController {
             self.currentQuestionIndex = 0
             self.correctAnswers = 0
             
-            if let firstQuestion = self.questionFactory.requestNextQuestion() {
-                self.currentQuestion = firstQuestion
-                
-                let viewModel = self.convert(model: firstQuestion)
-                self.show(quiz: viewModel)
-            }
+            questionFactory?.requestNextQuestion()
         }
         alert.addAction(action)
         self.present(alert, animated: true, completion: nil)
@@ -119,12 +110,7 @@ final class MovieQuizViewController: UIViewController {
             showResults(quiz: viewModel)
         } else {
             currentQuestionIndex += 1
-            if let nextQuestion = questionFactory.requestNextQuestion() {
-                currentQuestion = nextQuestion
-                
-                let viewModel = convert(model: nextQuestion)
-                show(quiz: viewModel)
-            }
+            self.questionFactory?.requestNextQuestion()
         }
         noButtonLabel.isEnabled = true
         yesButtonLabel.isEnabled = true
@@ -145,6 +131,19 @@ final class MovieQuizViewController: UIViewController {
             guard let self = self else {return}
             // код, который мы хотим вызвать через 1 секунду
             self.showNextQuestionOrResults()
+        }
+    }
+    
+    func didReceiveNextQuestion(question: QuizQuestion?) {
+        guard let question = question else {
+            return
+        }
+
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.show(quiz: viewModel)
         }
     }
 }
