@@ -6,7 +6,7 @@ struct ViewModel {
   let questionNumber: String
 }
 
-final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate, AlertPresenterDelegate {
     // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
@@ -22,15 +22,20 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var correctAnswers = 0
     private var questionsAmount = 10
     private var questionFactory: QuestionFactoryProtocol?
+    private var alertPresenter: AlertPresenterProtocol?
     private var currentQuestion: QuizQuestion?
+    private var statisticService: StatisticServiceProtocol?
     
     // MARK: - Initializers
     override func viewDidLoad() {
         super.viewDidLoad()
         setFonts()
         
+        alertPresenter = AlertPresenter(delegate: self)
         questionFactory = QuestionFactory(delegate: self)
         questionFactory?.requestNextQuestion()
+        
+        statisticService = StatisticService()
     }
     
     // MARK: - IB Actions
@@ -65,26 +70,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         return questionStep
     }
     
-    // приватный метод для показа результатов раунда квиза
-    // принимает вью модель QuizResultsViewModel и ничего не возвращает
-    private func showResults(quiz result: QuizResultsViewModel) {
-        let alert = UIAlertController(
-            title: result.title,
-            message: result.text,
-            preferredStyle: .alert)
-        
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self]  _ in
-            guard let self = self else {return}
-            
-            self.currentQuestionIndex = 0
-            self.correctAnswers = 0
-            
-            questionFactory?.requestNextQuestion()
-        }
-        alert.addAction(action)
-        self.present(alert, animated: true, completion: nil)
-    }
-    
     // приватный метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
     private func show(quiz step: QuizStepViewModel) {
         imageView.layer.borderWidth = 0
@@ -98,16 +83,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // метод ничего не принимает и ничего не возвращает
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionsAmount - 1 {
-            let text = correctAnswers == questionsAmount ?
-                    "Поздравляем, вы ответили на 10 из 10!" :
-                    "Вы ответили на \(correctAnswers) из \(questionsAmount), попробуйте ещё раз!"
+            statisticService?.store(correctAnswers: correctAnswers, questionsAmount: questionsAmount)
             
-            let viewModel = QuizResultsViewModel(
+            alertPresenter?.showAlert(alertData: AlertViewModel(
                 title: "Этот раунд окончен!",
-                text: text,
-                buttonText: "Сыграть ещё раз")
-            
-            showResults(quiz: viewModel)
+                text: "Ваш результат: \(correctAnswers)/\(questionsAmount)\n Количество сыгранных квизов: \(statisticService?.gamesCount ?? 0) \n Рекорд: \(statisticService?.bestGame.correctAnswers ?? 0)/\(statisticService?.bestGame.total ?? 0) (\(statisticService?.bestGame.date.dateTimeString ?? "")) \n Средняя точность \(statisticService?.totalAccuracy ?? "0.00")%",
+                buttonText: "Сыграть ещё раз",
+                completion: { [weak self] in
+                    guard let self = self else { return }
+                    
+                    self.currentQuestionIndex = 0
+                    self.correctAnswers = 0
+                    
+                    self.questionFactory?.requestNextQuestion()
+                }
+            ))
         } else {
             currentQuestionIndex += 1
             self.questionFactory?.requestNextQuestion()
@@ -145,5 +135,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.show(quiz: viewModel)
         }
+    }
+    
+    func didShowAlert(alert: UIAlertController) {
+         self.present(alert, animated: true, completion: nil)
     }
 }
