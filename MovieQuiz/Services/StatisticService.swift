@@ -1,7 +1,7 @@
 import Foundation
 
 // приватная часть для протокола будет описана внутри класса.
-class StatisticService {
+final class StatisticService {
     private let storage: UserDefaults = .standard
     
     private enum Keys: String {
