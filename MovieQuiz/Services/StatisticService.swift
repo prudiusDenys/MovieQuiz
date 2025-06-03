@@ -57,7 +57,7 @@ extension StatisticService: StatisticServiceProtocol {
                 date: Date()
             )
         }
-        
+    
         totalAccuracy = String(format: "%.2f", Double(correctAnswers) / (10.0 * Double(gamesCount)) * 100)
     }
 }
