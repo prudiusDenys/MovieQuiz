@@ -1,29 +1,56 @@
 import UIKit
 
-final class MovieQuizPresenter: QuestionFactoryDelegate {
-    // MARK: - Public Properties
-    let questionsAmount = 10
-    var correctAnswers = 0
-    var currentQuestion: QuizQuestion?
-    var statisticService: StatisticServiceProtocol?
-    var alertPresenter: AlertPresenterProtocol?
-    
+final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate {
+    // MARK: - Private Properties
+    private let statisticService: StatisticServiceProtocol!
     private var questionFactory: QuestionFactoryProtocol?
+    private var alertPresenter: AlertPresenterProtocol?
     private weak var viewController: MovieQuizViewController?
+
+    private var currentQuestion: QuizQuestion?
+    private let questionsAmount: Int = 10
+    private var currentQuestionIndex: Int = 0
+    private var correctAnswers: Int = 0
     
+    // MARK: - Initializers
     init(viewController: MovieQuizViewController) {
         self.viewController = viewController
         
+        statisticService = StatisticService()
+        
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        alertPresenter = AlertPresenter(delegate: self)
         questionFactory?.loadData()
         viewController.showLoadingIndicator(isHidden: true)
     }
     
-    // MARK: - Private Properties
-    private var currentQuestionIndex: Int = 0
-    
     
     // MARK: - Public Methods
+    func didLoadDataFromServer() {
+        viewController?.showLoadingIndicator(isHidden: true)
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        let message = error.localizedDescription
+        showNetworkError(message: message)
+    }
+    
+    func didReceiveNextQuestion(question: QuizQuestion?) {
+        guard let question else {
+            return
+        }
+        
+        currentQuestion = question
+        
+        let viewModel = convert(model: question)
+                
+        DispatchQueue.main.async { [weak self] in
+            self?.viewController?.show(quiz: viewModel)
+        }
+    }
+
+    
     func isLastQuestion() -> Bool {
         currentQuestionIndex == questionsAmount - 1
     }
@@ -58,23 +85,67 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
         )
     }
     
-    func didReceiveNextQuestion(question: QuizQuestion?) {
-        guard let question else {
+    func didRecieveNextQuestion(question: QuizQuestion?) {
+        guard let question = question else {
             return
         }
         
         currentQuestion = question
-        
         let viewModel = convert(model: question)
-                
         DispatchQueue.main.async { [weak self] in
             self?.viewController?.show(quiz: viewModel)
         }
     }
     
+    func showNetworkError(message: String) {
+        viewController?.showLoadingIndicator(isHidden: true)
+        
+        alertPresenter?.showAlert(alertData: AlertViewModel(
+            title: "Ошибка",
+            text: message,
+            buttonText: "Попробовать еще раз",
+            completion: { [weak self] in
+                guard let self else { return }
+                
+                self.restartGame()
+            }
+        ))
+    }
+    
+    func didShowAlert(alert: UIAlertController) {
+        alert.view.accessibilityIdentifier = "Game Result"
+        viewController?.present(alert, animated: true, completion: nil)
+    }
+
+    
+    // MARK: - Private Methods
+    private func didAnswer(isYes: Bool) {
+        guard let currentQuestion = currentQuestion else {
+            return
+        }
+        
+        proceedWithAnswer(isCorrect: currentQuestion.correctAnswer == isYes)
+    }
+    
+    private func proceedWithAnswer(isCorrect: Bool) {
+       if isCorrect {
+           self.addCorrectAnswer()
+       }
+               
+        viewController?.highlightImageBorder(isCorrectAnswer: isCorrect)
+        
+        // запускаем задачу через 1 секунду c помощью диспетчера задач
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            // код, который мы хотим вызвать через 1 секунду
+            self.proceedToNextQuestionOrResults()
+            viewController?.setAnswerButtonsState(isEnabled: true)
+        }
+   }
+    
     // метод, который содержит логику перехода в один из сценариев
     // метод ничего не принимает и ничего не возвращает
-     func showNextQuestionOrResults() {
+     private func proceedToNextQuestionOrResults() {
          if self.isLastQuestion() {
             statisticService?.store(correctAnswers: self.correctAnswers, questionsAmount: self.questionsAmount)
             
@@ -98,37 +169,5 @@ final class MovieQuizPresenter: QuestionFactoryDelegate {
             self.switchToNextQuestion()
             questionFactory?.requestNextQuestion()
         }
-    }
-    
-    func didLoadDataFromServer() {
-        viewController?.showLoadingIndicator(isHidden: true)
-        questionFactory?.requestNextQuestion()
-    }
-    
-    func didFailToLoadData(with error: Error) {
-        let message = error.localizedDescription
-        viewController?.showNetworkError(message: message)
-    }
-    
-    func didRecieveNextQuestion(question: QuizQuestion?) {
-        guard let question = question else {
-            return
-        }
-        
-        currentQuestion = question
-        let viewModel = convert(model: question)
-        DispatchQueue.main.async { [weak self] in
-            self?.viewController?.show(quiz: viewModel)
-        }
-    }
-
-    
-    // MARK: - Private Methods
-    private func didAnswer(isYes: Bool) {
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        
-        viewController?.showAnswerResult(isCorrect: currentQuestion.correctAnswer == isYes)
     }
 }

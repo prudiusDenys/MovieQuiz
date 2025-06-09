@@ -6,7 +6,7 @@ struct ViewModel {
   let questionNumber: String
 }
 
-final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
+final class MovieQuizViewController: UIViewController {
     // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
@@ -20,19 +20,16 @@ final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
     @IBOutlet private var loader: UIActivityIndicatorView!
     
     // MARK: - Private Properties
-    private var alertPresenter: AlertPresenterProtocol?
-    private var statisticService: StatisticServiceProtocol?
     private var presenter: MovieQuizPresenter!
     
     // MARK: - Initializers
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         setFonts()
         setUpImageView()
         
-        alertPresenter = AlertPresenter(delegate: self)
         presenter = MovieQuizPresenter(viewController: self)
-        statisticService = StatisticService()
     
         showLoadingIndicator(isHidden: false)
     }
@@ -49,29 +46,6 @@ final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
     }
     
     // MARK: - Public Methods
-    func didShowAlert(alert: UIAlertController) {
-        alert.view.accessibilityIdentifier = "Game Result"
-        self.present(alert, animated: true, completion: nil)
-    }
-    
-    func showAnswerResult(isCorrect: Bool) {
-       if isCorrect {
-           self.presenter.addCorrectAnswer()
-       }
-       
-       imageView.layer.borderWidth = 8
-       imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
-       
-        // запускаем задачу через 1 секунду c помощью диспетчера задач
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            // код, который мы хотим вызвать через 1 секунду
-            self.presenter.statisticService = self.statisticService
-            self.presenter.alertPresenter = self.alertPresenter
-            self.presenter.showNextQuestionOrResults()
-            setAnswerButtonsState(isEnabled: true)
-        }
-   }
     
     // метод вывода на экран вопроса, который принимает на вход вью модель вопроса и ничего не возвращает
      func show(quiz step: QuizStepViewModel) {
@@ -82,6 +56,22 @@ final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
         counterLabel.text = step.questionNumber
     }
     
+    func highlightImageBorder(isCorrectAnswer: Bool) {
+        imageView.layer.masksToBounds = true
+        imageView.layer.borderWidth = 8
+        imageView.layer.borderColor = isCorrectAnswer ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
+    }
+    
+    func showLoadingIndicator(isHidden: Bool) {
+        loader.isHidden = isHidden
+        loader.startAnimating()
+    }
+    
+    func setAnswerButtonsState(isEnabled: Bool) {
+       yesButtonLabel.isEnabled = isEnabled
+       noButtonLabel.isEnabled = isEnabled
+   }
+    
     // MARK: - Private Methods
     private func setFonts() {
         questionLabel.font = UIFont(name: "YSDisplay-Medium", size: 20)
@@ -91,33 +81,8 @@ final class MovieQuizViewController: UIViewController, AlertPresenterDelegate {
         textLabel.font = UIFont(name: "YSDisplay-Bold", size: 23)
     }
     
-    private func setAnswerButtonsState(isEnabled: Bool) {
-        yesButtonLabel.isEnabled = isEnabled
-        noButtonLabel.isEnabled = isEnabled
-    }
-    
     private func setUpImageView() {
         imageView.layer.masksToBounds = true
         imageView.layer.cornerRadius = 20
-    }
-    
-    func showLoadingIndicator(isHidden: Bool) {
-        loader.isHidden = isHidden
-        loader.startAnimating()
-    }
-    
-    func showNetworkError(message: String) {
-        showLoadingIndicator(isHidden: true)
-        
-        alertPresenter?.showAlert(alertData: AlertViewModel(
-            title: "Ошибка",
-            text: message,
-            buttonText: "Попробовать еще раз",
-            completion: { [weak self] in
-                guard let self else { return }
-                
-                self.presenter.restartGame()
-            }
-        ))
     }
 }
