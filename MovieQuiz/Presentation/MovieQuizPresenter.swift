@@ -1,15 +1,23 @@
 import UIKit
 
-final class MovieQuizPresenter {
+final class MovieQuizPresenter: QuestionFactoryDelegate {
     // MARK: - Public Properties
     let questionsAmount = 10
     var correctAnswers = 0
     var currentQuestion: QuizQuestion?
-    var questionFactory: QuestionFactoryProtocol?
     var statisticService: StatisticServiceProtocol?
     var alertPresenter: AlertPresenterProtocol?
     
-    weak var viewController: MovieQuizViewController?
+    private var questionFactory: QuestionFactoryProtocol?
+    private weak var viewController: MovieQuizViewController?
+    
+    init(viewController: MovieQuizViewController) {
+        self.viewController = viewController
+        
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        questionFactory?.loadData()
+        viewController.showLoadingIndicator(isHidden: true)
+    }
     
     // MARK: - Private Properties
     private var currentQuestionIndex: Int = 0
@@ -23,6 +31,7 @@ final class MovieQuizPresenter {
     func restartGame() {
         currentQuestionIndex = 0
         correctAnswers = 0
+        questionFactory?.requestNextQuestion()
     }
     
     func switchToNextQuestion() {
@@ -90,6 +99,29 @@ final class MovieQuizPresenter {
             questionFactory?.requestNextQuestion()
         }
     }
+    
+    func didLoadDataFromServer() {
+        viewController?.showLoadingIndicator(isHidden: true)
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        let message = error.localizedDescription
+        viewController?.showNetworkError(message: message)
+    }
+    
+    func didRecieveNextQuestion(question: QuizQuestion?) {
+        guard let question = question else {
+            return
+        }
+        
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        DispatchQueue.main.async { [weak self] in
+            self?.viewController?.show(quiz: viewModel)
+        }
+    }
+
     
     // MARK: - Private Methods
     private func didAnswer(isYes: Bool) {
