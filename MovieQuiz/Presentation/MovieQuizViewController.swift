@@ -6,7 +6,7 @@ struct ViewModel {
   let questionNumber: String
 }
 
-final class MovieQuizViewController: UIViewController {
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol {
     // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
@@ -71,6 +71,11 @@ final class MovieQuizViewController: UIViewController {
        yesButtonLabel.isEnabled = isEnabled
        noButtonLabel.isEnabled = isEnabled
    }
+    
+    func didShowAlert(alert: UIAlertController) {
+        alert.view.accessibilityIdentifier = "GameResult"
+        self.present(alert, animated: true, completion: nil)
+    }
     
     // MARK: - Private Methods
     private func setFonts() {

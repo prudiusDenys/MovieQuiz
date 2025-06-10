@@ -5,7 +5,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
     private let statisticService: StatisticServiceProtocol!
     private var questionFactory: QuestionFactoryProtocol?
     private var alertPresenter: AlertPresenterProtocol?
-    private weak var viewController: MovieQuizViewController?
+    private weak var viewController: MovieQuizViewControllerProtocol?
 
     private var currentQuestion: QuizQuestion?
     private let questionsAmount: Int = 10
@@ -13,7 +13,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
     private var correctAnswers: Int = 0
     
     // MARK: - Initializers
-    init(viewController: MovieQuizViewController) {
+    init(viewController: MovieQuizViewControllerProtocol) {
         self.viewController = viewController
         
         statisticService = StatisticService()
@@ -112,12 +112,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
         ))
     }
     
-    func didShowAlert(alert: UIAlertController) {
-        alert.view.accessibilityIdentifier = "Game Result"
-        viewController?.present(alert, animated: true, completion: nil)
-    }
-
-    
     // MARK: - Private Methods
     private func didAnswer(isYes: Bool) {
         guard let currentQuestion = currentQuestion else {
@@ -169,5 +163,9 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
             self.switchToNextQuestion()
             questionFactory?.requestNextQuestion()
         }
+    }
+    
+    func didShowAlert(alert: UIAlertController) {
+        viewController?.didShowAlert(alert: alert)
     }
 }
