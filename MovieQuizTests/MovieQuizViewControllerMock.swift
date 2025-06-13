@@ -6,6 +6,14 @@ final class MovieQuizViewControllerMock: MovieQuizViewControllerProtocol {
     
     }
     
+    func showResults(results: MovieQuiz.AlertViewModel) {
+        
+    }
+    
+    func showNetworkError(message: String) {
+        
+    }
+    
     func highlightImageBorder(isCorrectAnswer: Bool) {
     
     }

@@ -1,10 +1,9 @@
 import UIKit
 
-final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate {
+final class MovieQuizPresenter: QuestionFactoryDelegate {
     // MARK: - Private Properties
     private let statisticService: StatisticServiceProtocol!
     private var questionFactory: QuestionFactoryProtocol?
-    private var alertPresenter: AlertPresenterProtocol?
     private weak var viewController: MovieQuizViewControllerProtocol?
 
     private var currentQuestion: QuizQuestion?
@@ -19,7 +18,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
         statisticService = StatisticService()
         
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
-        alertPresenter = AlertPresenter(delegate: self)
         questionFactory?.loadData()
         viewController.showLoadingIndicator(isHidden: true)
     }
@@ -33,7 +31,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
     
     func didFailToLoadData(with error: Error) {
         let message = error.localizedDescription
-        showNetworkError(message: message)
+        viewController?.showNetworkError(message: message)
     }
     
     func didReceiveNextQuestion(question: QuizQuestion?) {
@@ -97,21 +95,6 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
         }
     }
     
-    func showNetworkError(message: String) {
-        viewController?.showLoadingIndicator(isHidden: true)
-        
-        alertPresenter?.showAlert(alertData: AlertViewModel(
-            title: "Ошибка",
-            text: message,
-            buttonText: "Попробовать еще раз",
-            completion: { [weak self] in
-                guard let self else { return }
-                
-                self.restartGame()
-            }
-        ))
-    }
-    
     // MARK: - Private Methods
     private func didAnswer(isYes: Bool) {
         guard let currentQuestion = currentQuestion else {
@@ -143,7 +126,7 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
          if self.isLastQuestion() {
             statisticService?.store(correctAnswers: self.correctAnswers, questionsAmount: self.questionsAmount)
             
-            alertPresenter?.showAlert(alertData: AlertViewModel(
+             viewController?.showResults(results: AlertViewModel(
                 title: "Этот раунд окончен!",
                 text: """
                 Ваш результат: \(correctAnswers)/\(self.questionsAmount)
@@ -163,9 +146,5 @@ final class MovieQuizPresenter: QuestionFactoryDelegate, AlertPresenterDelegate 
             self.switchToNextQuestion()
             questionFactory?.requestNextQuestion()
         }
-    }
-    
-    func didShowAlert(alert: UIAlertController) {
-        viewController?.didShowAlert(alert: alert)
     }
 }

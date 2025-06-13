@@ -6,7 +6,7 @@ struct ViewModel {
   let questionNumber: String
 }
 
-final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol {
+final class MovieQuizViewController: UIViewController, MovieQuizViewControllerProtocol, AlertPresenterDelegate {
     // MARK: - IB Outlets
     @IBOutlet private var textLabel: UILabel!
     @IBOutlet private var counterLabel: UILabel!
@@ -21,6 +21,7 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
     
     // MARK: - Private Properties
     private var presenter: MovieQuizPresenter!
+    private var alertPresenter: AlertPresenterProtocol?
     
     // MARK: - Initializers
     override func viewDidLoad() {
@@ -30,6 +31,7 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
         setUpImageView()
         
         presenter = MovieQuizPresenter(viewController: self)
+        alertPresenter = AlertPresenter(delegate: self)
     
         showLoadingIndicator(isHidden: false)
     }
@@ -56,6 +58,10 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
         counterLabel.text = step.questionNumber
     }
     
+    func showResults(results: AlertViewModel){
+        alertPresenter?.showAlert(alertData: results)
+    }
+    
     func highlightImageBorder(isCorrectAnswer: Bool) {
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
@@ -75,6 +81,21 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
     func didShowAlert(alert: UIAlertController) {
         alert.view.accessibilityIdentifier = "GameResult"
         self.present(alert, animated: true, completion: nil)
+    }
+    
+    func showNetworkError(message: String) {
+        showLoadingIndicator(isHidden: true)
+        
+        alertPresenter?.showAlert(alertData: AlertViewModel(
+            title: "Ошибка",
+            text: message,
+            buttonText: "Попробовать еще раз",
+            completion: { [weak self] in
+                guard let self else { return }
+                
+                presenter.restartGame()
+            }
+        ))
     }
     
     // MARK: - Private Methods
