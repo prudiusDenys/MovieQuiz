@@ -53,7 +53,7 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
      func show(quiz step: QuizStepViewModel) {
         imageView.layer.borderWidth = 0
         imageView.layer.cornerRadius = 20
-        imageView.image = step.image
+        imageView.image = UIImage(data: step.image) ?? UIImage()
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
     }
